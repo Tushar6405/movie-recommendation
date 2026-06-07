@@ -45,20 +45,32 @@ A full-stack movie recommendation web app powered by **TF-IDF content-based filt
 ## 🗂️ Project Structure
 
 ```
-movie-recommender/
+movie-recommendation/
+│
+├── movies.ipynb            # EDA + ML pipeline (Jupyter Notebook)
+├── movies_metadata.csv     # Raw dataset (~32MB)
 │
 ├── app.py                  # Streamlit frontend
 ├── main.py                 # FastAPI backend
 │
-├── df.pkl                  # Movie DataFrame (title, genres, etc.)
+├── df.pkl                  # Processed Movie DataFrame
 ├── indices.pkl             # Title → row index mapping
 ├── tfidf.pkl               # Fitted TF-IDF vectorizer
 ├── tfidf_matrix.pkl        # Pre-computed TF-IDF sparse matrix
 │
 ├── requirements.txt
 ├── runtime.txt             # Python 3.11.9
+├── README.md
 └── .gitignore
 ```
+
+---
+
+## 📦 Dataset
+
+- **Source**: [TMDB Movies Metadata — Kaggle](https://www.kaggle.com/datasets/rounakbanik/the-movies-dataset)
+- **File**: `movies_metadata.csv` (~32MB, included in this repo)
+- **Key columns used**: `title`, `overview`, `genres`, `tagline`, `vote_average`, `popularity`
 
 ---
 
@@ -134,6 +146,38 @@ curl "http://localhost:8000/tmdb/search?query=inception"
 
 # Get recommendations bundle
 curl "http://localhost:8000/movie/search?query=Inception&tfidf_top_n=10&genre_limit=10"
+```
+
+---
+
+## 📊 Exploratory Data Analysis & ML Pipeline
+
+The recommendation model was built in a Jupyter Notebook (`movies.ipynb`) using the TMDB Movies Metadata dataset.
+
+### 1. EDA
+- Loaded `movies_metadata.csv` and explored shape, columns, and data types
+- Identified and handled missing values (`isnull().sum()`)
+- Removed duplicate records
+- Selected relevant features: `title`, `overview`, `genres`, `tagline`, `vote_average`, `popularity`
+
+### 2. Data Preprocessing
+- Parsed `genres` from raw JSON strings using `ast.literal_eval`
+- Filled missing `overview` and `tagline` with empty strings
+- Combined `overview + genres + tagline` into a single `tags` column for vectorization
+
+### 3. NLP Text Processing
+- Lowercased all text and removed punctuation
+- Removed **stopwords** using NLTK
+- Applied **Lemmatization** (WordNetLemmatizer) to normalize words
+
+### 4. TF-IDF Model
+- Vectorized `tags` using `TfidfVectorizer` with `max_features=50,000` and `ngram_range=(1,2)`
+- Computed **cosine similarity** between movie vectors
+- Saved model artifacts as `.pkl` files for API use
+
+```python
+tfidf = TfidfVectorizer(max_features=50000, ngram_range=(1,2), stop_words='english')
+tfidf_matrix = tfidf.fit_transform(df['tags'])
 ```
 
 ---
